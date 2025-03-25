@@ -1,0 +1,44 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: pg-backup
+  namespace: db
+spec:
+  concurrencyPolicy: Forbid
+  schedule: "@daily"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          imagePullSecrets:
+          - name: gitlab-reg-cred
+          containers:
+          - name: app
+            image: baznikin/pg-backup-s3:latest
+            imagePullPolicy: IfNotPresent
+            env:
+            - name: BUCKET
+              "pg-backups"
+            - name: S3_bucket_location
+              value: "ru-central1"
+            - name: S3_host_base
+              value: "storage.yandexcloud.net"
+            - name: S3_host_bucket
+              value: "%(bucket)s.storage.yandexcloud.net"
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: superuser-cred
+                  key: pg_su_password
+            - name: S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: pg-backup-s3
+                  key: S3_ACCESS_KEY
+            - name: S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: pg-backup-s3
+                  key: S3_SECRET_KEY
+
